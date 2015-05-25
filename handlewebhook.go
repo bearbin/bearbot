@@ -42,6 +42,32 @@ func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
 	if !signatureMatch {
 		http.Error(w, "403 Forbidden - HMAC verification failed", http.StatusForbidden)
 	}
+
+	// Select the correct method to call depening on the
+	switch r.Header.Get("X-Github-Event") {
+	case "pull_request":
+		err = handlePullRequestUpdate(w, r, hd)
+	case "issue_comment":
+		err = handleIssueCommentUpdate(w, r, hd)
+	case "status":
+		err = handleCommitStatusUpdate(w, r, hd)
+	}
+	if err != nil {
+		log.Println("handleWebhook: ", err.Error())
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
+}
+
+func handlePullRequestUpdate(w http.ResponseWriter, r *http.Request, hd interface{}) error {
+	return nil // Not implemented.
+}
+
+func handleIssueCommentUpdate(w http.ResponseWriter, r *http.Request, hd interface{}) error {
+	return nil // Not implemented.
+}
+
+func handleCommitStatusUpdate(w http.ResponseWriter, r *http.Request, hd interface{}) error {
+	return nil // Not implemented.
 }
 
 // Function getRepoByName gets the associated repoRecord for a given Owner and
