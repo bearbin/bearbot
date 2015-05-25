@@ -29,7 +29,7 @@ func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// JSON-decode the data.
-	var hd interface{}
+	var hd map[string]interface{}
 	err = json.Unmarshal(body, &hd)
 	if err != nil {
 		log.Println("handleWebhook: ", err.Error())
@@ -58,7 +58,28 @@ func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handlePullRequestUpdate(w http.ResponseWriter, r *http.Request, hd interface{}) error {
+func handlePullRequestUpdate(w http.ResponseWriter, r *http.Request, hd map[string]interface{}) error {
+	// What type of event was this update sent for?
+	switch hd["action"].(string) {
+	case "synchronize":
+		prdata := hd["pull_request"].(map[string]interface{})
+		// Delete old signoffs for the pull request.
+		signoffs, err := dbmap.Select(
+			signoffRecord{},
+			"SELECT * FROM signoffs WHERE CommitHash=?",
+			prdata["head"].(map[string]interface{})["sha"].(string),
+		)
+		if err != nil {
+			return err
+		}
+		_, err = dbmap.Delete(signoffs...)
+		if err != nil {
+			return err
+		}
+		// Update the comment posted by the bot.
+
+	}
+
 	return nil // Not implemented.
 }
 

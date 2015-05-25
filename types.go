@@ -40,7 +40,7 @@ type authorisedUserRecord struct {
 
 type signoffRecord struct {
 	SignoffID   int
-	CommitID    int
+	CommitHash  int
 	UserID      int
 	DateCreated time.Time
 }
