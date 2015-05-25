@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,32 +14,47 @@ import (
 
 func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
 	// Get the repository this request is for.
-	repository := &repoRecord{}
-	err := dbmap.SelectOne(
-		repoRecord{},
-		"SELECT * FROM repositories WHERE Owner=? AND RepoName=?",
-		c.URLParams["owner"],
-		c.URLParams["reponame"],
-	)
+	repo, err := getRepoByName(c.URLParams["owner"], c.URLParams["reponame"])
 	if err != nil {
 		log.Println("handleWebhook: ", err.Error())
-		http.Error(w, "database select failed", http.StatusInternalServerError)
+		http.Error(w, "database error", http.StatusInternalServerError)
 		return
 	}
 
+	// Read all the body data.
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println("handleWebhook: ", err.Error())
 		http.Error(w, "body read failed", http.StatusInternalServerError)
 		return
 	}
+	// JSON-decode the data.
+	var hd interface{}
+	err = json.Unmarshal(body, &hd)
+	if err != nil {
+		log.Println("handleWebhook: ", err.Error())
+		http.Error(w, "json decode failed", http.StatusInternalServerError)
+	}
 
+	// Verify the GitHub signature.
 	ghSignature := r.Header.Get("X-Hub-Signature")
-
-	signatureMatch := verifyGHSignature(body, ghSignature, repository.WebhookSecret)
+	signatureMatch := verifyGHSignature(body, ghSignature, repo.WebhookSecret)
 	if !signatureMatch {
 		http.Error(w, "403 Forbidden - HMAC verification failed", http.StatusForbidden)
 	}
+}
+
+// Function getRepoByName gets the associated repoRecord for a given Owner and
+// RepoName.
+func getRepoByName(owner string, reponame string) (*repoRecord, error) {
+	repo := &repoRecord{}
+	err := dbmap.SelectOne(
+		repo,
+		"SELECT * FROM repositories WHERE Owner=? AND RepoName=?",
+		owner,
+		reponame,
+	)
+	return repo, err
 }
 
 // Verifies the HMAC signature provided by GitHub for Webhooks. If the signature
