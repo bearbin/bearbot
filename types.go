@@ -14,7 +14,7 @@ type configuration struct {
 type repoRecord struct {
 	RepoID           int
 	Owner            string
-	RepoName         string
+	Name             string
 	WebhookSecret    string
 	SignoffThreshold int
 }
@@ -23,12 +23,13 @@ type pullRequestRecord struct {
 	PullID int
 	RepoID int
 	Number int
+	Head   string
 }
 
 type repoStringsRecord struct {
-	RepostringsID int
+	RepoStringsID int
 	RepoID        int
-	StringType    int
+	StringType    string
 	StringText    string
 }
 
@@ -43,4 +44,9 @@ type signoffRecord struct {
 	CommitHash  int
 	UserID      int
 	DateCreated time.Time
+}
+
+type infoCommentContents struct {
+	SignoffThreshold int
+	Signoffs         []signoffRecord
 }
