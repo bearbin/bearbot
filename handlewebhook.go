@@ -16,6 +16,12 @@ import (
 	"github.com/zenazn/goji/web"
 )
 
+type webhookUpdateContext struct {
+	Repo *repoRecord
+	Body []byte
+	JSON *jsontree.JsonTree
+}
+
 // Function handleWebhook is called when an event is produced and GitHub sends
 // off a webhook.
 func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
@@ -42,6 +48,12 @@ func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "json decode failed", http.StatusInternalServerError)
 	}
 
+	whuc := &webhookUpdateContext{
+		repo,
+		body,
+		hd,
+	}
+
 	// Verify the GitHub signature.
 	ghSignature := r.Header.Get("X-Hub-Signature")
 	signatureMatch := verifyGHSignature(body, ghSignature, repo.WebhookSecret)
@@ -52,108 +64,16 @@ func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
 	// Select the correct method to call depening on the
 	switch r.Header.Get("X-Github-Event") {
 	case "pull_request":
-		err = handlePullRequestUpdate(w, r, hd)
+		err = handlePullRequestUpdate(w, r, whuc)
 	case "issue_comment":
-		err = handleIssueCommentUpdate(w, r, hd)
+		err = handleIssueCommentUpdate(w, r, whuc)
 	case "status":
-		err = handleCommitStatusUpdate(w, r, hd)
+		err = handleCommitStatusUpdate(w, r, whuc)
 	}
 	if err != nil {
 		log.Println("handleWebhook: ", err.Error())
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 	}
-}
-
-func handlePullRequestUpdate(w http.ResponseWriter, r *http.Request, hd *jsontree.JsonTree) error {
-	// Get useful information about the pull request.
-	repoName, err := hd.Get("repository").Get("name").String()
-	if err != nil {
-		return err
-	}
-	repoOwner, err := hd.Get("repository").Get("owner").Get("login").String()
-	if err != nil {
-		return err
-	}
-	repository, err := getRepoByName(repoOwner, repoName)
-	if err != nil {
-		return err
-	}
-	prdata := hd.Get("pull_request")
-	prFloat, err := prdata.Get("number").Number()
-	if err != nil {
-		return err
-	}
-	prNumber := int(prFloat)
-	// What type of event was this update sent for?
-	action, err := hd.Get("action").String()
-	if err != nil {
-		return err
-	}
-	prid, err := prdata.Get("id").Number()
-	if err != nil {
-		return err
-	}
-	tmp, err := dbmap.Get(pullRequestRecord{}, int(prid))
-	if err != nil {
-		return err
-	}
-	pr := tmp.(*pullRequestRecord)
-	switch action {
-	case "synchronize":
-		// Get the newest commit ID for the pull request.
-		latestCommit, err := prdata.Get("head").Get("sha").String()
-		if err != nil {
-			return err
-		}
-
-		// Update the pull request record to reflect the new head commit.
-		pr.Head = latestCommit
-		_, err = dbmap.Update(pr)
-		if err != nil {
-			return err
-		}
-
-		// TODO: Is this neccessary? Should the old signoffs just be kept around.
-		// Delete signoffs for the older commit.
-		signoffs, err := dbmap.Select(
-			signoffRecord{},
-			"SELECT * FROM signoffs WHERE CommitHash=?",
-			latestCommit,
-		)
-		if err != nil {
-			return err
-		}
-		n, err := dbmap.Delete(signoffs...)
-		if err != nil {
-			return err
-		}
-		if n > 0 {
-			// Post a comment informing that singoffs have been reset, since a
-			// new commit has been pushed.
-			// Get the string from the database.
-			text, err := getRepoStringByName(repository.RepoID, "signoffsremoved")
-			if err != nil {
-				return err
-			}
-			_, _, err = ghClient.Issues.CreateComment(
-				repository.Owner,
-				repository.Name,
-				prNumber,
-				&github.IssueComment{Body: &(text.StringText)},
-			)
-			if err != nil {
-				return err
-			}
-		}
-
-		err = updateInfoComment(pr)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	return nil
 }
 
 // Function updateInfoComment updates the info comment on a pull request, and
@@ -197,11 +117,11 @@ func updateInfoComment(pr *pullRequestRecord) error {
 	return nil // not implemented yet
 }
 
-func handleIssueCommentUpdate(w http.ResponseWriter, r *http.Request, hd *jsontree.JsonTree) error {
+func handleIssueCommentUpdate(w http.ResponseWriter, r *http.Request, whuc *webhookUpdateContext) error {
 	return nil // Not implemented.
 }
 
-func handleCommitStatusUpdate(w http.ResponseWriter, r *http.Request, hd *jsontree.JsonTree) error {
+func handleCommitStatusUpdate(w http.ResponseWriter, r *http.Request, whuc *webhookUpdateContext) error {
 	return nil // Not implemented.
 }
 
