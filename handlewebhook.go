@@ -131,7 +131,7 @@ func getRepoByName(owner string, reponame string) (*repoRecord, error) {
 	repo := &repoRecord{}
 	err := dbmap.SelectOne(
 		repo,
-		"SELECT * FROM repositories WHERE Owner=? AND RepoName=?",
+		"SELECT * FROM repositories WHERE Owner= ? AND RepoName= ?",
 		owner,
 		reponame,
 	)
