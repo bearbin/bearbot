@@ -19,13 +19,6 @@ type repoRecord struct {
 	SignoffThreshold int
 }
 
-type pullRequestRecord struct {
-	PullID int
-	RepoID int
-	Number int
-	Head   string
-}
-
 type repoStringsRecord struct {
 	RepoStringsID int
 	RepoID        int
@@ -39,14 +32,8 @@ type authorisedUserRecord struct {
 	Username string
 }
 
-type signoffRecord struct {
-	SignoffID   int
-	CommitHash  int
-	UserID      int
-	DateCreated time.Time
-}
 
 type infoCommentContents struct {
 	SignoffThreshold int
-	Signoffs         []signoffRecord
+	Signoffs         []string
 }

@@ -9,7 +9,7 @@ import (
 
 type pullRequestUpdateContext struct {
 	*webhookUpdateContext
-	Pull     *pullRequestRecord
+	Pull     int
 	PullData *jsontree.JsonTree
 }
 
@@ -21,17 +21,13 @@ func handlePullRequestUpdate(w http.ResponseWriter, r *http.Request, whuc *webho
 	if err != nil {
 		return err
 	}
-	prid, err := prdata.Get("id").Number()
-	if err != nil {
-		return err
-	}
-	tmp, err := dbmap.Get(pullRequestRecord{}, int(prid))
+	prid, err := prdata.Get("id").Int()
 	if err != nil {
 		return err
 	}
 	pruc := &pullRequestUpdateContext{
 		webhookUpdateContext: whuc,
-		Pull:                 tmp.(*pullRequestRecord),
+		Pull:                 prid,
 		PullData:             prdata,
 	}
 	switch action {

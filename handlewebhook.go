@@ -78,7 +78,7 @@ func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
 
 // Function updateInfoComment updates the info comment on a pull request, and
 // creates one if it does not already exist.
-func updateInfoComment(pr *pullRequestRecord) error {
+func updateInfoComment(pr int) error {
 	// First, get the pull request record.
 	tmp, err := dbmap.Get(&repoRecord{}, pr.RepoID)
 	repo := tmp.(*repoRecord)

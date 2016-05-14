@@ -17,10 +17,8 @@ func initDatabase() (*gorp.DbMap, error) {
 	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.SqliteDialect{}}
 	// Add tables to the mapping.
 	dbmap.AddTableWithName(repoRecord{}, "repositories").SetKeys(false, "RepoID")
-	dbmap.AddTableWithName(pullRequestRecord{}, "pulls").SetKeys(false, "PullID")
 	dbmap.AddTableWithName(repoStringsRecord{}, "repostrings").SetKeys(true, "RepostringsID")
 	dbmap.AddTableWithName(authorisedUserRecord{}, "authedusers").SetKeys(false, "UserID")
-	dbmap.AddTableWithName(signoffRecord{}, "signoffs").SetKeys(true, "SignoffID")
 	// Create the tables if they don't exist already.
 	err = dbmap.CreateTablesIfNotExists()
 	if err != nil {
