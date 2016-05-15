@@ -3,36 +3,36 @@ package main
 import (
 	"net/http"
 
-	"github.com/bmatsuo/go-jsontree"
+	"encoding/json"
 	"github.com/google/go-github/github"
 )
 
-type pullRequestUpdateContext struct {
-	*webhookUpdateContext
-	Pull     int
-	PullData *jsontree.JsonTree
+type pullRequestWebhookData struct {
+	// What action was performed on the pull request. None of the actions have a
+	// special relevance for us.
+	Action string `json:"action"`
+	// The pull request number.
+	Number int `json:"number"`
+	PullRequest struct {
+		// The state of the pull request (open/closed etc.)
+		State string `json:"state"`
+		User struct {
+			Login string `json:"login"`
+		} `json:"user"`
+	} `json:"pull_request"`
 }
 
 func handlePullRequestUpdate(w http.ResponseWriter, r *http.Request, whuc *webhookUpdateContext) error {
-	// Get useful information about the pull request.
-	prdata := whuc.JSON.Get("pull_request")
-	// What type of event was this update sent for?
-	action, err := whuc.JSON.Get("action").String()
+	// Unmarshal the body JSON into a usable form.
+	pr := &pullRequestWebhookData{}
+	err := json.Unmarshal(whuc.Body, pr)
 	if err != nil {
 		return err
 	}
-	prid, err := prdata.Get("id").Int()
-	if err != nil {
-		return err
-	}
-	pruc := &pullRequestUpdateContext{
-		webhookUpdateContext: whuc,
-		Pull:                 prid,
-		PullData:             prdata,
-	}
-	switch action {
-	case "synchronize":
-		handlePullRequestSynchronize(pruc)
+
+	// There's no point checking anything about an open pull request.
+	if pr.PullRequest.State != "open" {
+		return nil
 	}
 
 	return nil

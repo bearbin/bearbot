@@ -31,9 +31,3 @@ type authorisedUserRecord struct {
 	RepoID   int
 	Username string
 }
-
-
-type infoCommentContents struct {
-	SignoffThreshold int
-	Signoffs         []string
-}

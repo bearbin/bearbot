@@ -19,7 +19,6 @@ import (
 type webhookUpdateContext struct {
 	Repo *repoRecord
 	Body []byte
-	JSON *jsontree.JsonTree
 }
 
 // Function handleWebhook is called when an event is produced and GitHub sends
@@ -33,32 +32,24 @@ func handleWebhook(c web.C, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read all the body data.
+	// Read the body data.
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println("handleWebhook: ", err.Error())
 		http.Error(w, "body read failed", http.StatusInternalServerError)
 		return
 	}
-	// JSON-decode the data.
-	hd := jsontree.New()
-	err = hd.UnmarshalJSON(body)
-	if err != nil {
-		log.Println("handleWebhook: ", err.Error())
-		http.Error(w, "json decode failed", http.StatusInternalServerError)
-	}
 
 	whuc := &webhookUpdateContext{
 		repo,
 		body,
-		hd,
 	}
 
 	// Verify the GitHub signature.
 	ghSignature := r.Header.Get("X-Hub-Signature")
 	signatureMatch := verifyGHSignature(body, ghSignature, repo.WebhookSecret)
 	if !signatureMatch {
-		http.Error(w, "403 Forbidden - HMAC verification failed", http.StatusForbidden)
+		http.Error(w, "signature verification failed", http.StatusForbidden)
 	}
 
 	// Select the correct method to call depening on the
@@ -127,13 +118,13 @@ func handleCommitStatusUpdate(w http.ResponseWriter, r *http.Request, whuc *webh
 
 // Function getRepoByName gets the associated repoRecord for a given Owner and
 // RepoName.
-func getRepoByName(owner string, reponame string) (*repoRecord, error) {
+func getRepoByName(owner string, name string) (*repoRecord, error) {
 	repo := &repoRecord{}
 	err := dbmap.SelectOne(
 		repo,
-		"SELECT * FROM repositories WHERE Owner= ? AND RepoName= ?",
+		"SELECT * FROM repositories WHERE Owner = ? AND Name = ?",
 		owner,
-		reponame,
+		name,
 	)
 	return repo, err
 }

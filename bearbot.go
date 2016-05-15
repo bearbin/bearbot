@@ -74,10 +74,10 @@ func main() {
 	goji.Use(middleware.EnvInit)
 	// The prevents a panic crash, instead logging an error.
 	goji.Use(middleware.Recoverer)
-	// This GZIPs the output so les bandwidth is used.
+	// This GZIPs the output so less bandwidth is used.
 	goji.Use(gzipHandler)
 
-	goji.Post("/hooker/:owner/:reponame", handleWebhook)
+	goji.Post("/hooks/:owner/:reponame", handleWebhook)
 
 	goji.Serve()
 }
